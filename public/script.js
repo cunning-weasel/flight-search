@@ -121,7 +121,6 @@ const search = async () => {
     console.error(error);
   }
 };
-
 // nice YYYY-MM-DD formatting string that Flight Offers Search API accepts as
 // well as no float-points for pasenger numbers
 const formatDate = (date) => {
@@ -150,7 +149,7 @@ const showResults = (results) => {
         No results
       </li>`
     );
-  }
+  } 
   results.forEach(({ itineraries, price }) => {
     const priceLabel = `${price.total} ${price.currency}`;
     searchResults.insertAdjacentHTML(
