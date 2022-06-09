@@ -6,9 +6,6 @@
   "scripts": {
     "start": "node app.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "amadeus": "^6.0.0",
     "dotenv": "^16.0.1",

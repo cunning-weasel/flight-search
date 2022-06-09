@@ -35,6 +35,7 @@ app.get("/api/autocomplete", async (req, res) => {
 app.get("/api/search", async (req, res) => {
   try {
     const { query } = req;
+    console.log(query);
     const { data } = await amadeus.shopping.flightOffersSearch.get({
       originLocationCode: query.origin,
       destinationLocationCode: query.destination,

@@ -1,4 +1,3 @@
-// access all form elems
 const originInput = document.getElementById("origin-input");
 const originOptions = document.getElementById("origin-options");
 const destinationInput = document.getElementById("destination-input");
@@ -17,8 +16,12 @@ const searchResultsSeparator = document.getElementById(
 );
 const searchResultsLoader = document.getElementById("search-results-loader");
 const searchResults = document.getElementById("search-results");
+const autocompleteTimeout = 300;
 
-// reset func to set all form vals to default
+let autocompleteTimeoutHandle = 0;
+let destinationCityCodes = {};
+let originCityCodes = {};
+
 const reset = () => {
   originInput.value = "";
   destinationInput.value = "";
@@ -35,31 +38,23 @@ const reset = () => {
   searchResultsLoader.classList.add("d-none");
 };
 
-// events for these 4 cases:
-// 1. disable/enable search on form completion
-document.body.addEventListener("input", () => {
-  searchButton.disabled = !originInput.value || !destinationInput.value;
-});
+const formatDate = (date) => {
+  const [formattedDate] = date.toISOString().split("T");
+  return formattedDate;
+};
 
-// 2. autocomplete loation inputs from Amadeus Airport & City Search API
-// a. define autocomplete func. Throttle API call with setTimeout so they
-// happen only when user slows/ stops inputting - vars defined first:
-const autocompleteTimeout = 3000;
-let autocompleteTimeoutHandle = 0;
-// b. IATA codes corresponding to the given cities are saved to an object
-// for later use with the search endpoint
-let destinationCityCodes = {};
-let originCityCodes = {};
+const formatNumber = (number) => {
+  return `${Math.abs(parseInt(number))}`;
+};
 
 const autocomplete = (input, datalist, cityCodes) => {
   clearTimeout(autocompleteTimeoutHandle);
   autocompleteTimeoutHandle = setTimeout(async () => {
     try {
       const params = new URLSearchParams({ keyword: input.value });
-      // make sure fetch jas params stringified and esacaped with URLSearchParams,
-      // clean up datalist elem and add using option elements
       const response = await fetch(`/api/autocomplete?${params}`);
       const data = await response.json();
+
       datalist.textContent = "";
       data.forEach((entry) => {
         cityCodes[entry.name.toLowerCase()] = entry.iataCode;
@@ -74,31 +69,6 @@ const autocomplete = (input, datalist, cityCodes) => {
   }, autocompleteTimeout);
 };
 
-// autocomplete can handle both inputs
-originInput.addEventListener("input", () => {
-  if (originInput) {
-    autocomplete(originInput, originOptions, originCityCodes);
-  }
-});
-// autocomplete can handle both inputs
-destinationInput.addEventListener("input", () => {
-  if (destinationInput) {
-    autocomplete(destinationInput, destinationOptions, destinationCityCodes);
-  }
-});
-
-// 3. showing/hiding the return date input for round trip
-flightTypeSelect.addEventListener("change", () => {
-  if (flightTypeSelect.value === "one-way") {
-    returnDate.classList.add("d-none");
-  } else {
-    returnDate.classList.remove("d-none");
-  }
-});
-
-// 4. searching for flight offers with the Amadeus Flight Offers
-// a. define search func - only req a return data - presentation
-// of results will be in separate func
 const search = async () => {
   try {
     const returns = flightTypeSelect.value === "round-trip";
@@ -116,31 +86,13 @@ const search = async () => {
     });
     const response = await fetch(`/api/search?${params}`);
     const data = await response.json();
+
     return data;
   } catch (error) {
     console.error(error);
   }
 };
-// nice YYYY-MM-DD formatting string that Flight Offers Search API accepts as
-// well as no float-points for pasenger numbers
-const formatDate = (date) => {
-  const [formattedDate] = date.toISOString().split("T");
-  return formattedDate;
-};
-const formatNumber = (number) => {
-  return `${Math.abs(parseInt(number))}`;
-};
 
-searchButton.addEventListener("click", async () => {
-  searchResultsSeparator.classList.remove("d-none");
-  searchResultsLoader.classList.remove("d-none");
-  searchResults.textContent = "";
-  const results = await search();
-  searchResultsLoader.classList.add("d-none");
-  showResults(results);
-});
-
-// display results
 const showResults = (results) => {
   if (results.length === 0) {
     searchResults.insertAdjacentHTML(
@@ -149,40 +101,72 @@ const showResults = (results) => {
         No results
       </li>`
     );
-  } 
+  }
   results.forEach(({ itineraries, price }) => {
     const priceLabel = `${price.total} ${price.currency}`;
+
     searchResults.insertAdjacentHTML(
       "beforeend",
       `<li class="flex-column flex-sm-row list-group-item d-flex justify-content-between align-items-sm-center">
-          ${itineraries
-            .map((itinerary, index) => {
-              const [, hours, minutes] = itinerary.duration.match(/(\d+)H(\d+)?/);
-              const travelPath = itinerary.segments
-                .flatMap(({ arrival, departure }, index, segments) => {
-                  if (index === segments.length - 1) {
-                    return [departure.iataCode, arrival.iataCode];
-                  }
-                  return [departure.iataCode];
-                })
-                .join(" → ");
-              return `
-              <div class="flex-column flex-1 m-2 d-flex">
-                <small class="text-muted">${
-                  index === 0 ? "Outbound" : "Return"
-                }</small>
-                <span class="fw-bold">${travelPath}</span>
-                <div>${hours || 0}h ${minutes || 0}m</div>
-              </div>
-            `;
-            })
-            .join("")}
-          <span class="bg-primary rounded-pill m-2 badge fs-6">${priceLabel}</span>
-        </li>`
+        ${itineraries
+          .map((itinerary, index) => {
+            const [, hours, minutes] = itinerary.duration.match(/(\d+)H(\d+)?/);
+            const travelPath = itinerary.segments
+              .flatMap(({ arrival, departure }, index, segments) => {
+                if (index === segments.length - 1) {
+                  return [departure.iataCode, arrival.iataCode];
+                }
+                return [departure.iataCode];
+              })
+              .join(" → ");
+            return `
+            <div class="flex-column flex-1 m-2 d-flex">
+              <small class="text-muted">${
+                index === 0 ? "Outbound" : "Return"
+              }</small>
+              <span class="fw-bold">${travelPath}</span>
+              <div>${hours || 0}h ${minutes || 0}m</div>
+            </div>
+          `;
+          })
+          .join("")}
+        <span class="bg-primary rounded-pill m-2 badge fs-6">${priceLabel}</span>
+      </li>`
     );
   });
 };
 
+// events
+document.body.addEventListener("change", () => {
+  clearTimeout(autocompleteTimeoutHandle);
+  searchButton.disabled = !originInput.value || !destinationInput.value;
+});
 
+originInput.addEventListener("input", () => {
+  autocomplete(originInput, originOptions, originCityCodes);
+});
+
+destinationInput.addEventListener("input", () => {
+  autocomplete(destinationInput, destinationOptions, destinationCityCodes);
+});
+
+flightTypeSelect.addEventListener("change", () => {
+  if (flightTypeSelect.value === "one-way") {
+    returnDate.classList.add("d-none");
+  } else {
+    returnDate.classList.remove("d-none");
+  }
+});
+
+searchButton.addEventListener("click", async () => {
+  searchResultsSeparator.classList.remove("d-none");
+  searchResultsLoader.classList.remove("d-none");
+  searchResults.textContent = "";
+
+  const results = await search();
+
+  searchResultsLoader.classList.add("d-none");
+  showResults(results);
+});
 
 reset();
