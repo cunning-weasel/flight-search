@@ -19,6 +19,7 @@ app.use(express.static("public"));
 app.get("/api/autocomplete", async (req, res) => {
   try {
     const { query } = req;
+    // console.log(query);
     const { data } = await amadeus.referenceData.locations.get({
       keyword: query.keyword,
       subType: Amadeus.location.city,
@@ -48,10 +49,13 @@ app.get("/api/search", async (req, res) => {
       // as a one-way flight, otherwise it's a roundtrip
       ...(query.returnDate ? { returnDate: query.returnDate } : {}),
     });
+    // check out res from amadeus api - limit to first 2
+    console.log(data.slice(0, 2));
     res.json(data);
   } catch (error) {
     console.error(error.res);
     res.json([]);
+    console.log(res.json());
   }
 });
 
