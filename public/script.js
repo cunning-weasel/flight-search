@@ -16,6 +16,7 @@ const searchResultsSeparator = document.getElementById(
 );
 const searchResultsLoader = document.getElementById("search-results-loader");
 const searchResults = document.getElementById("search-results");
+
 const autocompleteTimeout = 300;
 
 let autocompleteTimeoutHandle = 0;
