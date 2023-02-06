@@ -87,7 +87,6 @@ const search = async () => {
     });
     const response = await fetch(`/api/search?${params}`);
     const data = await response.json();
-
     return data;
   } catch (error) {
     console.error(error);
