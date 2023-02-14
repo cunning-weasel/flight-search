@@ -18,7 +18,6 @@ const searchResultsLoader = document.getElementById("search-results-loader");
 const searchResults = document.getElementById("search-results");
 
 const autocompleteTimeout = 300;
-
 let autocompleteTimeoutHandle = 0;
 let destinationCityCodes = {};
 let originCityCodes = {};
@@ -109,27 +108,26 @@ const showResults = (results) => {
       "beforeend",
       `<li class="flex-column flex-sm-row list-group-item d-flex justify-content-between align-items-sm-center">
         ${itineraries
-          .map((itinerary, index) => {
-            const [, hours, minutes] = itinerary.duration.match(/(\d+)H(\d+)?/);
-            const travelPath = itinerary.segments
-              .flatMap(({ arrival, departure }, index, segments) => {
-                if (index === segments.length - 1) {
-                  return [departure.iataCode, arrival.iataCode];
-                }
-                return [departure.iataCode];
-              })
-              .join(" → ");
-            return `
+        .map((itinerary, index) => {
+          const [, hours, minutes] = itinerary.duration.match(/(\d+)H(\d+)?/);
+          const travelPath = itinerary.segments
+            .flatMap(({ arrival, departure }, index, segments) => {
+              if (index === segments.length - 1) {
+                return [departure.iataCode, arrival.iataCode];
+              }
+              return [departure.iataCode];
+            })
+            .join(" → ");
+          return `
             <div class="flex-column flex-1 m-2 d-flex">
-              <small class="text-muted">${
-                index === 0 ? "Outbound" : "Return"
-              }</small>
+              <small class="text-muted">${index === 0 ? "Outbound" : "Return"
+            }</small>
               <span class="fw-bold">${travelPath}</span>
               <div>${hours || 0}h ${minutes || 0}m</div>
             </div>
           `;
-          })
-          .join("")}
+        })
+        .join("")}
         <span class="bg-primary rounded-pill m-2 badge fs-6">${priceLabel}</span>
       </li>`
     );
